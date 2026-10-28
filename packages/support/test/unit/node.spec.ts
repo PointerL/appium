@@ -59,5 +59,32 @@ describe('node utilities', function () {
       const obj3 = [1, {}, 3];
       assert.strictEqual(node.deepFreeze(obj3), obj3);
     });
+
+    it('should freeze self-referential objects', function () {
+      const object: {self?: object} = {};
+      object.self = object;
+
+      assert.strictEqual(node.deepFreeze(object), object);
+      assert.ok(Object.isFrozen(object));
+    });
+
+    it('should freeze objects and arrays that reference each other', function () {
+      const object: {array?: unknown[]} = {};
+      const array = [object];
+      object.array = array;
+
+      assert.strictEqual(node.deepFreeze(object), object);
+      assert.ok(Object.isFrozen(object));
+      assert.ok(Object.isFrozen(array));
+    });
+
+    it('should freeze nested objects when the root is already frozen', function () {
+      const nested = {value: 1};
+      const object = Object.freeze({nested});
+
+      assert.strictEqual(node.deepFreeze(object), object);
+      assert.ok(Object.isFrozen(object));
+      assert.ok(Object.isFrozen(nested));
+    });
   });
 });

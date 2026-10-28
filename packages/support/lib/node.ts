@@ -83,19 +83,7 @@ export function getObjectId(object: object): string {
  * @returns The same object that was passed after it was made immutable.
  */
 export function deepFreeze<T>(object: T): T {
-  let propNames: string[];
-  try {
-    propNames = Object.getOwnPropertyNames(object as object);
-  } catch {
-    return object;
-  }
-  for (const name of propNames) {
-    const value = (object as Record<string, unknown>)[name];
-    if (value && typeof value === 'object') {
-      deepFreeze(value);
-    }
-  }
-  return Object.freeze(object) as T;
+  return freezeRecursively(object, new WeakSet<object>());
 }
 
 /**
@@ -129,6 +117,29 @@ export function getModuleRootSync(moduleName: string, filePath: string): string 
 }
 
 // #region Private
+
+function freezeRecursively<T>(object: T, seen: WeakSet<object>): T {
+  if (object === null || (typeof object !== 'object' && typeof object !== 'function')) {
+    return object;
+  }
+  let propNames: string[];
+  try {
+    propNames = Object.getOwnPropertyNames(object as object);
+  } catch {
+    return object;
+  }
+  if (seen.has(object as object)) {
+    return object;
+  }
+  seen.add(object as object);
+  for (const name of propNames) {
+    const value = (object as Record<string, unknown>)[name];
+    if (value && typeof value === 'object') {
+      freezeRecursively(value, seen);
+    }
+  }
+  return Object.freeze(object) as T;
+}
 
 const ECMA_SIZES = Object.freeze({
   STRING: 2,
